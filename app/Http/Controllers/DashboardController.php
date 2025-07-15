@@ -1130,59 +1130,56 @@ public function cardTransfer(Request $request)
 
 
 
-    public function makeDeposit(Request $request)
-    {
-        $transaction_pin = $request->input('transaction_pin');
-        if ($transaction_pin != Auth::user()->account_pin) {
-        return back()->with('error', ' Incorrect Transaction Pin number!');
-        }  
-        
 
-        $ref = rand(76503737, 12344994);   
-        $deposit = new Deposit;
-        $deposit->transaction_id = $ref;
-        $deposit->user_id = Auth::user()->id;
-        $deposit->amount = $request['amount'];
-        $deposit->email = $request['email'];
-        $deposit->status = 0;
-    
-
-    
-    if($request->hasFile('front_cheque')){
-        $chequeID = $request->file('front_cheque');
-    
-        $ext = $chequeID->getClientOriginalExtension();
-        $filename = 'front_cheque' . time() . '.' . $ext; // Unique filename for photoID
-        $chequeID->move('uploads/cheque', $filename);
-        $deposit->front_cheque =  $filename;
+public function makeDeposit(Request $request)
+{
+    // Validate transaction PIN
+    if ($request->input('transaction_pin') !== Auth::user()->account_pin) {
+        return back()->with('error', 'Incorrect Transaction Pin number!');
     }
 
+    // Validate the request
+    $request->validate([
+        'amount' => 'required|numeric|min:1',
+        'email' => 'required|email',
+        'front_cheque' => 'nullable|image|mimes:jpeg,png,jpg,pdf|max:2048'
+    ]);
 
-    // if($request->hasFile('license')){
-    //     $licenseFile = $request->file('license');
-    
-    //     $ext = $licenseFile->getClientOriginalExtension();
-    //     $filename = 'license_' . time() . '.' . $ext; // Unique filename for license
-    //     $licenseFile->move('uploads/deposit', $filename);
-    //     $deposit->front_cheque =  $filename;
-    // }
+    // Generate a unique transaction reference
+    $ref = uniqid(rand(1000, 9999));
 
-   
-    
-        $deposit->save();
-    
-        $transaction = new Transaction;
-        $transaction->user_id = Auth::user()->id;
-        $transaction->transaction_id = $ref;
-        $transaction->transaction_ref = "LN".$ref;
-        $transaction->transaction_type = "Deposit";
-        $transaction->transaction = "Deposit";
-        $transaction->transaction_amount =  $request['amount'];
-        $transaction->transaction_description = "Check Deposit of ".$request['amount'];
-        $transaction->transaction_status = 0;
-        $transaction->save();
-        return back()->with('status', ' Mobile Check Deposit detected, please wait for approval by the administrator') ;
+    // Save deposit
+    $deposit = new Deposit();
+    $deposit->transaction_id = $ref;
+    $deposit->user_id = Auth::id();
+    $deposit->amount = $request->amount;
+    $deposit->email = $request->email;
+    $deposit->status = 0;
+
+    if ($request->hasFile('front_cheque')) {
+        $file = $request->file('front_cheque');
+        $filename = 'front_cheque_' . Auth::id() . '_' . time() . '.' . $file->getClientOriginalExtension();
+        $file->move(public_path('uploads/cheque'), $filename);
+        $deposit->front_cheque = $filename;
     }
+
+    $deposit->save();
+
+    // Record transaction
+    $transaction = new Transaction();
+    $transaction->user_id = Auth::id();
+    $transaction->transaction_id = $ref;
+    $transaction->transaction_ref = "LN" . $ref;
+    $transaction->transaction_type = "Deposit";
+    $transaction->transaction = "Deposit";
+    $transaction->transaction_amount = $request->amount;
+    $transaction->transaction_description = "Mobile Check Deposit of " . $request->amount;
+    $transaction->transaction_status = 0;
+    $transaction->save();
+
+    return back()->with('status', 'Mobile Check Deposit detected. Please wait for administrator approval.');
+}
+
 
     // public function makeLoan(Request $request)
     // {
@@ -1278,68 +1275,72 @@ public function cardTransfer(Request $request)
 
 
 
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
+
 public function ContinueLoan(Request $request)
 {
+    $request->validate([
+        'amount' => 'required|numeric|min:1',
+        'reason' => 'required|string|max:255',
+        'ssn' => 'required|string|max:20',
+        'credit_score' => 'required|numeric|min:0|max:850',
+        'email' => 'required|email',
+        'license' => 'nullable|file|mimes:jpeg,png,jpg,pdf|max:2048',
+        'photoID' => 'nullable|file|mimes:jpeg,png,jpg,pdf|max:2048',
+        'selfie' => 'nullable|file|mimes:jpeg,png,jpg|max:2048',
+    ]);
 
+    $ref = uniqid('LN');
+    $userId = Auth::id();
 
-    $ref = rand(76503737, 12344994);   
-    $loan = new Loan;
+    $loan = new Loan();
     $loan->transaction_id = $ref;
-    $loan->user_id = Auth::user()->id;
-    $loan->amount = $request['amount'];
-    $loan->reason = $request['reason'];
-    $loan->ssn = $request['ssn'];
-    $loan->credit_score = $request['credit_score'];
-     $loan->email = $request['email'];
+    $loan->user_id = $userId;
+    $loan->amount = $request->amount;
+    $loan->reason = $request->reason;
+    $loan->ssn = $request->ssn;
+    $loan->credit_score = $request->credit_score;
+    $loan->email = $request->email;
     $loan->status = 0;
 
+    // Handle each file type
+    if ($request->hasFile('license')) {
+        $filename = Str::random(40) . '.' . $request->license->getClientOriginalExtension();
+        $path = $request->file('license')->storeAs('loan_license', $filename);
+        $loan->license = $path;
+    }
 
-  if($request->hasFile('license')){
-    $licenseFile = $request->file('license');
+    if ($request->hasFile('photoID')) {
+        $filename = Str::random(40) . '.' . $request->photoID->getClientOriginalExtension();
+        $path = $request->file('photoID')->storeAs('loan_photoid', $filename);
+        $loan->photoID = $path;
+    }
 
-    $ext = $licenseFile->getClientOriginalExtension();
-    $filename = 'license_' . time() . '.' . $ext; // Unique filename for license
-    $licenseFile->move('uploads/loan', $filename);
-    $loan->license =  $filename;
-}
-
-if($request->hasFile('photoID')){
-    $photoIDFile = $request->file('photoID');
-
-    $ext = $photoIDFile->getClientOriginalExtension();
-    $filename = 'photoID_' . time() . '.' . $ext; // Unique filename for photoID
-    $photoIDFile->move('uploads/loan', $filename);
-    $loan->photoID =  $filename;
-}
-
-if($request->hasFile('selfie')){
-    $selfieFile = $request->file('selfie');
-
-    $ext = $selfieFile->getClientOriginalExtension();
-    $filename = 'selfie_' . time() . '.' . $ext; // Unique filename for selfie
-    $selfieFile->move('uploads/loan', $filename);
-    $loan->selfie =  $filename;
-}
-
+    if ($request->hasFile('selfie')) {
+        $filename = Str::random(40) . '.' . $request->selfie->getClientOriginalExtension();
+        $path = $request->file('selfie')->storeAs('loan_selfie', $filename);
+        $loan->selfie = $path;
+    }
 
     $loan->save();
 
-    $transaction = new Transaction;
-    $transaction->user_id = Auth::user()->id;
+    $transaction = new Transaction();
+    $transaction->user_id = $userId;
     $transaction->transaction_id = $ref;
-    $transaction->transaction_ref = "LN".$ref;
+    $transaction->transaction_ref = $ref;
     $transaction->transaction_type = "Loan";
     $transaction->transaction = "Loan";
-    $transaction->transaction_amount =  $request['amount'];
-    $transaction->transaction_description = "Requested for a loan of ".$request['amount'];
+    $transaction->transaction_amount = $request->amount;
+    $transaction->transaction_description = "Requested a loan of $" . number_format($request->amount, 2);
     $transaction->transaction_status = 0;
     $transaction->save();
 
-    
-
     $data['data'] = $request->session()->get('data');
-    return view('dashboard.loan_completed',$data);
-   }
+
+    return view('dashboard.loan_completed', $data);
+}
 
 
 
