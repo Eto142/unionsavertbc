@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Welcome to Elite Saver Trust Bank Corporation</title>
+    <title>Welcome to Union Saver Trust Bank Corporation</title>
     <style>
         /* Reset styles */
         body,
@@ -68,11 +68,11 @@
 <body>
     <div class="container">
         <div class="header">
-            <img src="{{asset('logo.png')}}" alt="Elite Saver Trust Bank Corporation Logo">
+            <img src="{{asset('logo.png')}}" alt="Union Saver Trust Bank Corporation Logo">
         </div>
         <div class="content">
             <h1 style="text-align: center; color: #333;">Confirm Your Registration</h1>
-            <h2 style="text-align: center; color: #333;">Welcome to Elite Saver Trust Bank Corporation</h2>
+            <h2 style="text-align: center; color: #333;">Welcome to Union Saver Trust Bank Corporation</h2>
             <p>Your registration is successful, and you are just a step away from verifying your account.</p>
             <p>Please find your activation code below:</p>
             <p class="activation-code">{{$validToken}}</p>
@@ -83,10 +83,10 @@
                 <li>Never give your login access to anyone.</li>
                 <li>This message is automated; do not reply.</li>
             </ul>
-            <p><em>Kind Regards,<br>Elite Saver Trust Bank Corporation</em></p>
+            <p><em>Kind Regards,<br>Union Saver Trust Bank Corporation</em></p>
         </div>
         <div class="footer">
-            <p>&copy; 2024 Elite Saver Trust Bank Corporation. All Rights Reserved.</p>
+            <p>&copy; 2024 Union Saver Trust Bank Corporation. All Rights Reserved.</p>
             <p><a href="#">Unsubscribe</a></p>
         </div>
     </div>
